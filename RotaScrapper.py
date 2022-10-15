@@ -1,6 +1,8 @@
 #authhor:kalpaG 2022/09/30
 #!/usr/bin/env python3
 import csv
+from multiprocessing.resource_sharer import stop
+import sys
 import urllib 
 import http.cookiejar as cookielib  ## http.cookiejar in python3
 import mechanize
@@ -8,37 +10,55 @@ from bs4 import BeautifulSoup
 import pandas as pd 
 from datetime import datetime, timedelta
 from dateutil.parser import parse
+import configparser 
+
+try :
+    configur = configparser.ConfigParser()
+    configur.read('Configs.cfg')
+    baseurl = configur.get('INFO', 'baseurl')
+    email = configur.get('INFO', 'email')
+    password = configur.get('INFO', 'password')
+    roster_start_date = configur.get('INFO', 'roster_start_date')  #this date should be in YYYY-MM-DD format and ideally should be monday
+    number_of_weeks_ahead = int(configur.get('INFO', 'number_of_weeks_ahead')) #roster will be retrieved for this many weeks
+    person_id = configur.get('INFO', 'personid')
+     
+except Exception as e :
+    print("Config file related error occured : " +str(e))
+    sys.exit(1)
 
 def CleanupString(string):
     return "".join(string.replace('\n','').strip().split())
 
-baseurl = "https://ouhagm.medirota.com"
-email = 'vingifernando@gmail.com'
-password = '@Kurulu14314'
-loginurl = baseurl + "/login/"
+loginurl = baseurl+"/login/"
 
-#this date should be in YYYY-MM-DD format and ideally should be monday 
-roster_start_date='2022-10-03'
-number_of_weeks_ahead=46 #roster will be retrieved for this many weeks
-cj = cookielib.CookieJar()
-br = mechanize.Browser()
-br.set_cookiejar(cj)
- #login
-br.open(loginurl)
-br.select_form(nr=0)
-br.form['t_email'] = email
-br.form['t_password'] = password
-br.submit()
+try :
+    cj = cookielib.CookieJar()
+    br = mechanize.Browser()
+    br.set_cookiejar(cj)
+   
+     #login
+    br.open(loginurl)
+    br.select_form(nr=0)
+    br.form['t_email'] = email
+    br.form['t_password'] = password
+    resp = br.submit()
+    if resp.code != 200 :
+        print("Login info incorrect ")
+        print(str(resp.read()))
+        sys.exit(1)
+except Exception as e :
+    print("Error Occurred while connecting to medirota : " + str(e))
+    sys.exit(1)
 
 masterdic={}
     
 for weekno in range(number_of_weeks_ahead):
     weekstart = str((parse(roster_start_date) + timedelta(weeks=weekno)).strftime('%Y-%m-%d'))
     print(str(weekno+1)+":  processing the week starting from = " +weekstart)
-    rosterlink = baseurl + "/rota/" + weekstart + "/people/?entity_filter=person-1802&rotamap_show=True&empty_rota_rows_show=false"
+    rosterlink = baseurl + "/rota/" + weekstart + "/people/?entity_filter=person-" + person_id + "&rotamap_show=True&empty_rota_rows_show=false"
     weeklydic={}
     dayslist=[]
-    for day in range(7):
+    for day in range(7): #7 days of the week
         val=(parse(weekstart) + timedelta(days=day)).strftime('%Y-%m-%d')
         dayslist.append(val);         
    
