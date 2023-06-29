@@ -11,6 +11,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 import configparser 
+import datetime
 
 try :
     configur = configparser.ConfigParser()
@@ -18,7 +19,13 @@ try :
     baseurl = configur.get('INFO', 'baseurl')
     email = configur.get('INFO', 'email')
     password = configur.get('INFO', 'password')
-    roster_start_date = configur.get('INFO', 'roster_start_date')  #this date should be in YYYY-MM-DD format and ideally should be monday
+    roster_start_date = configur.get('INFO', 'roster_start_date')  #this date should be in YYYY-MM-DD format and should be monday
+    
+    tdate = datetime.datetime.strptime(roster_start_date, "%Y-%m-%d").date()
+    roster_starting_monday = tdate - datetime.timedelta(days=tdate.weekday())
+    print("roster starting on Monday : " + str(roster_starting_monday))
+     
+    
     number_of_weeks_ahead = int(configur.get('INFO', 'number_of_weeks_ahead')) #roster will be retrieved for this many weeks
     person_id = configur.get('INFO', 'personid')
      
@@ -53,7 +60,7 @@ except Exception as e :
 masterdic={}
     
 for weekno in range(number_of_weeks_ahead):
-    weekstart = str((parse(roster_start_date) + timedelta(weeks=weekno)).strftime('%Y-%m-%d'))
+    weekstart = str((roster_starting_monday + timedelta(weeks=weekno)).strftime('%Y-%m-%d'))
     print(str(weekno+1)+":  processing the week starting from = " +weekstart)
     rosterlink = baseurl + "/rota/" + weekstart + "/people/?entity_filter=person-" + person_id + "&rotamap_show=True&empty_rota_rows_show=false"
     weeklydic={}
@@ -83,6 +90,7 @@ for weekno in range(number_of_weeks_ahead):
         print("Error Occurred : " + str(e))
         continue
     
+    print(weeklydic)
     masterdic[str(weekno)]=weeklydic
 
 with open('Roster_Vihangi.csv', 'w') as f:
@@ -93,4 +101,4 @@ with open('Roster_Vihangi.csv', 'w') as f:
             
             
 
-            
+ 
